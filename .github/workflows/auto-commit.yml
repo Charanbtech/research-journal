@@ -1,10 +1,10 @@
-name: Auto Activity Pulse
+name: Activity Pulse
 
 on:
   schedule:
-    # Runs at 14:00 UTC every 2 days
-    - cron: '0 14 */2 * *'
-  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+    # Wakes up at non-round minutes 4 times daily to evaluate natural randomized window
+    - cron: '17 3,9,15,21 * * *'
+  workflow_dispatch: # Manual one-click trigger for testing
 
 permissions:
   contents: write
@@ -21,22 +21,40 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Generate Research Entry & Dev Checkpoint
+      - name: Evaluate Random Window & Generate Changes
         id: generate
         run: |
+          # Run generator. If exit code is 2, interval has not elapsed yet (skip).
+          set +e
           MSG=$(python scripts/generator.py)
-          echo "commit_msg=$MSG" >> $GITHUB_OUTPUT
+          EXIT_CODE=$?
+          set -e
+          
+          if [ $EXIT_CODE -eq 2 ]; then
+            echo "Natural randomized interval in progress. Skipping this cycle."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          elif [ $EXIT_CODE -eq 0 ]; then
+            echo "Random window active. Committing change: $MSG"
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "commit_msg=$MSG" >> $GITHUB_OUTPUT
+          else
+            echo "Error running generator."
+            exit $EXIT_CODE
+          fi
 
       - name: Commit and Push Changes
+        if: steps.generate.outputs.skip == 'false'
         run: |
           git config --global user.name "Charanbtech"
           git config --global user.email "charanbsd25@gmail.com"
-          git add LOGBOOK.md data/telemetry.json
           
-          # Only commit if changes exist
-          if ! git diff --staged --quiet; then
-            git commit -m "${{ steps.generate.outputs.commit_msg }}"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          # Stage code & research notes
+          git add src/ notes/
+          
+          # Record success to roll next randomized interval (26-68 hours)
+          python -c "import sys; sys.path.insert(0, 'scripts'); import generator; generator.record_commit_success()"
+          git add data/state.json
+          
+          # Commit and push
+          git commit -m "${{ steps.generate.outputs.commit_msg }}"
+          git push

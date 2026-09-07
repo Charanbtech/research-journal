@@ -1,15 +1,14 @@
 """
 Local Runner for GitHub Activity Automation
-Allows running the commit cycle locally, with automatic verification of
-Git author email (Charanbtech / charanbsd25@gmail.com) and support for Windows Task Scheduler.
+Allows running the commit cycle locally with randomized timing variations
+and strict author attribution to Charanbtech <charanbsd25@gmail.com>.
 """
 
 import sys
 import subprocess
 import argparse
+import random
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
-import json
 
 TARGET_NAME = "Charanbtech"
 TARGET_EMAIL = "charanbsd25@gmail.com"
@@ -36,96 +35,80 @@ def ensure_git_config():
     base_dir = get_base_dir()
     run_cmd(["git", "config", "--local", "user.name", TARGET_NAME], cwd=base_dir)
     run_cmd(["git", "config", "--local", "user.email", TARGET_EMAIL], cwd=base_dir)
-    print(f"Verified local Git identity: {TARGET_NAME} <{TARGET_EMAIL}>")
 
-def should_commit(force: bool = False) -> bool:
-    """Checks if at least 2 days (48 hours) have passed since the last recorded commit."""
-    if force:
-        return True
-        
-    telemetry_path = get_base_dir() / "data" / "telemetry.json"
-    if not telemetry_path.exists():
-        return True
-        
-    try:
-        with open(telemetry_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        last_updated_str = data.get("last_updated")
-        if not last_updated_str:
-            return True
-            
-        last_dt = datetime.fromisoformat(last_updated_str)
-        now_dt = datetime.now(timezone.utc)
-        
-        # 48 hours = 2 days interval
-        if (now_dt - last_dt) >= timedelta(days=2):
-            return True
-        else:
-            remaining = timedelta(days=2) - (now_dt - last_dt)
-            hours = remaining.total_seconds() / 3600
-            print(f"Skipping: Last commit was made recently. Next commit eligible in {hours:.1f} hours.")
-            return False
-    except Exception as e:
-        print(f"Warning checking telemetry: {e}. Proceeding with commit.")
-        return True
-
-def perform_commit(force_push: bool = True):
-    """Generates an entry, stages changes, commits, and pushes."""
-    ensure_git_config()
+def perform_single_commit(force: bool = False) -> tuple[bool, str]:
     base_dir = get_base_dir()
+    gen_script = base_dir / "scripts" / "generator.py"
     
-    # 1. Run generator
-    code, commit_msg = run_cmd([sys.executable, str(base_dir / "scripts" / "generator.py")])
-    if code != 0 or not commit_msg:
-        print(f"Error running generator: {commit_msg}")
-        return False
+    cmd = [sys.executable, str(gen_script)]
+    if force:
+        cmd.append("--force")
         
-    print(f"Generated commit message: {commit_msg}")
+    code, out = run_cmd(cmd)
+    if code == 2:
+        print(f"Timing check: {out}")
+        return False, "Not ready yet"
+    elif code != 0:
+        print(f"Error from generator: {out}")
+        return False, out
+        
+    commit_msg = out.strip()
+    print(f"Applying change with message: '{commit_msg}'")
     
-    # 2. Stage files
-    run_cmd(["git", "add", "LOGBOOK.md", "data/telemetry.json"], cwd=base_dir)
+    # Stage relevant source files and data
+    run_cmd(["git", "add", "src/", "notes/", "data/state.json"], cwd=base_dir)
     
-    # 3. Check for changes
     diff_code, _ = run_cmd(["git", "diff", "--staged", "--quiet"], cwd=base_dir)
     if diff_code == 0:
-        print("No staged changes to commit.")
-        return True
+        print("No staged changes detected.")
+        return False, "No changes"
         
-    # 4. Commit
-    commit_code, commit_out = run_cmd([
+    # Commit with explicit author
+    c_code, c_out = run_cmd([
         "git", "commit",
         f"--author={TARGET_NAME} <{TARGET_EMAIL}>",
         "-m", commit_msg
     ], cwd=base_dir)
     
-    if commit_code != 0:
-        print(f"Git commit failed: {commit_out}")
-        return False
+    if c_code != 0:
+        print(f"Git commit failed: {c_out}")
+        return False, c_out
         
-    print("Git commit successful!")
+    # Update state file with new randomized wait interval
+    update_code, _ = run_cmd([
+        sys.executable, "-c",
+        "import sys; sys.path.insert(0, 'scripts'); import generator; generator.record_commit_success()"
+    ], cwd=base_dir)
     
-    # 5. Push if remote configured
-    if force_push:
-        print("Pushing to remote origin...")
-        push_code, push_out = run_cmd(["git", "push"], cwd=base_dir)
-        if push_code == 0:
-            print("Successfully pushed to GitHub! Heatmap will update shortly.")
-        else:
-            print(f"Push notice (if remote not set yet): {push_out}")
-            
-    return True
+    return True, commit_msg
 
 def main():
-    parser = argparse.ArgumentParser(description="Local runner for GitHub automated commits.")
-    parser.add_argument("--force", action="store_true", help="Force commit now regardless of 2-day timer.")
+    parser = argparse.ArgumentParser(description="Organic commit runner for GitHub profile.")
+    parser.add_argument("--force", action="store_true", help="Force commit now regardless of random timer.")
     parser.add_argument("--no-push", action="store_true", help="Commit locally without pushing.")
     args = parser.parse_args()
     
-    if should_commit(force=args.force):
-        success = perform_commit(force_push=not args.no_push)
-        sys.exit(0 if success else 1)
-    else:
+    ensure_git_config()
+    base_dir = get_base_dir()
+    
+    success, msg = perform_single_commit(force=args.force)
+    if not success:
         sys.exit(0)
+        
+    # Natural human session burst: 25% chance of making a second small follow-up commit
+    if not args.force and random.random() < 0.25:
+        print("Simulating follow-up dev commit in this session...")
+        perform_single_commit(force=True)
+        
+    if not args.no_push:
+        print("Pushing to remote repository...")
+        push_code, push_out = run_cmd(["git", "push"], cwd=base_dir)
+        if push_code == 0:
+            print("Successfully pushed to GitHub! Contributions updated naturally.")
+        else:
+            print(f"Push response: {push_out}")
+            
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
