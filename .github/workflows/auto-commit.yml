@@ -1,0 +1,42 @@
+name: Auto Activity Pulse
+
+on:
+  schedule:
+    # Runs at 14:00 UTC every 2 days
+    - cron: '0 14 */2 * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Generate Research Entry & Dev Checkpoint
+        id: generate
+        run: |
+          MSG=$(python scripts/generator.py)
+          echo "commit_msg=$MSG" >> $GITHUB_OUTPUT
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "Charanbtech"
+          git config --global user.email "charanbsd25@gmail.com"
+          git add LOGBOOK.md data/telemetry.json
+          
+          # Only commit if changes exist
+          if ! git diff --staged --quiet; then
+            git commit -m "${{ steps.generate.outputs.commit_msg }}"
+            git push
+          else
+            echo "No changes to commit."
+          fi
