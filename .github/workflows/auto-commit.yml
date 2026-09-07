@@ -48,12 +48,9 @@ jobs:
           git config --global user.name "Charanbtech"
           git config --global user.email "charanbsd25@gmail.com"
           
-          # Stage code & research notes
-          git add src/ notes/
-          
           # Record success to roll next randomized interval (26-68 hours)
           python -c "import sys; sys.path.insert(0, 'scripts'); import generator; generator.record_commit_success()"
-          git add data/state.json
+          git add -A
           
           # Commit and push
           git commit -m "${{ steps.generate.outputs.commit_msg }}"
