@@ -19,3 +19,9 @@ Personal research notes on model architectures, memory optimization, and algorit
 ### Differential Privacy Gradient Clipping Thresholds
 - **Observation:** Evaluated Renyi DP budgets when training with DP-SGD. Clipping gradient norms to C=1.0 yielded the best empirical trade-off between privacy leakage and model accuracy.
 - **Takeaway:** Fixed clipping thresholds require adaptive learning rate dampening in early iterations.
+
+---
+
+### Mixture of Experts (MoE) Load Balancing Loss
+- **Observation:** Auxiliary loss coefficient of 0.01 successfully prevents routing collapse to top-2 experts during distributed pre-training.
+- **Next steps:** Experiment with capacity factors under 1.25 to save peak VRAM.

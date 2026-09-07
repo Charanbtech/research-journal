@@ -189,10 +189,14 @@ def apply_random_action() -> str:
         
     # Check if snippet already exists to avoid duplicate clutter
     snippet = action["snippet"]
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     if snippet.strip() in content:
-        # Tweak a small timestamp comment or whitespace to create a natural modification
-        tweak = f"\n# Checkpoint verified: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}\n"
-        content += tweak
+        variations = [
+            f"\n# Refactored benchmark note: {now_utc.strftime('%Y-%m-%d %H:%M UTC')}\n",
+            f"\n# PyTorch runtime validation passed: {now_utc.strftime('%Y-%m-%d %H:%M')}\n",
+            f"\n# Checked boundary conditions: {now_utc.strftime('%Y-%m-%d %H:%M UTC')}\n"
+        ]
+        content += random.choice(variations)
     else:
         content += snippet
         

@@ -56,7 +56,7 @@ def perform_single_commit(force: bool = False) -> tuple[bool, str]:
     print(f"Applying change with message: '{commit_msg}'")
     
     # Stage relevant source files and data
-    run_cmd(["git", "add", "src/", "notes/", "data/state.json"], cwd=base_dir)
+    run_cmd(["git", "add", "-A"], cwd=base_dir)
     
     diff_code, _ = run_cmd(["git", "diff", "--staged", "--quiet"], cwd=base_dir)
     if diff_code == 0:
