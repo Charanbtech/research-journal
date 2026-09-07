@@ -47,10 +47,9 @@ GitHub Actions Wakeup (4x Daily: 03:17, 09:17, 15:17, 21:17 UTC)
 
 ### Step 1: Push Repository to GitHub
 
-Create a new repository on your GitHub account (named e.g. `devpulse` or `ai-research-lab`), then run:
+This repository is configured with `https://github.com/Charanbtech/research-journal.git`. Run:
 
 ```bash
-git remote add origin https://github.com/Charanbtech/<REPO-NAME>.git
 git push -u origin main
 ```
 
