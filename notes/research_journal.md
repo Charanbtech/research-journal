@@ -25,3 +25,9 @@ Personal research notes on model architectures, memory optimization, and algorit
 ### Mixture of Experts (MoE) Load Balancing Loss
 - **Observation:** Auxiliary loss coefficient of 0.01 successfully prevents routing collapse to top-2 experts during distributed pre-training.
 - **Next steps:** Experiment with capacity factors under 1.25 to save peak VRAM.
+
+---
+
+### Vector Search: HNSW vs IVF-PQ Recall Tradeoffs
+- **Observation:** At ef_search=64, HNSW maintains >98% recall at 1200 QPS on 1536-dim embeddings. IVF-PQ provides 3x smaller memory footprint with minor recall drop.
+- **Decision:** Use HNSW for latency-critical agent retrievers and IVF-PQ for cold archives.
