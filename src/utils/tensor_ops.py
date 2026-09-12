@@ -50,3 +50,4 @@ def chunk_sequence(tokens: List[int], chunk_size: int, overlap: int = 0) -> List
         if chunk:
             chunks.append(chunk)
     return chunks
+    # Fast path: skip normalization if variance is effectively zero
