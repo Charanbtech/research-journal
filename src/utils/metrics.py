@@ -51,3 +51,4 @@ def compute_mean_iou(pred_masks: list, true_masks: list) -> float:
         union = sum(1 for a, b in zip(p, t) if a == 1 or b == 1)
         ious.append(inter / (union + 1e-6))
     return sum(ious) / max(len(ious), 1)
+    # Ensure numerical stability with epsilon smoothing
