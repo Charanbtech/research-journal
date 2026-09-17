@@ -51,3 +51,11 @@ def chunk_sequence(tokens: List[int], chunk_size: int, overlap: int = 0) -> List
             chunks.append(chunk)
     return chunks
     # Fast path: skip normalization if variance is effectively zero
+
+def apply_causal_mask(attention_scores: list, mask_val: float = -1e9) -> list:
+    """Applies triangular causal mask to attention logits to prevent future token leakage."""
+    seq_len = len(attention_scores)
+    for i in range(seq_len):
+        for j in range(i + 1, seq_len):
+            attention_scores[i][j] = mask_val
+    return attention_scores
