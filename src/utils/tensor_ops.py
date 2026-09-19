@@ -59,3 +59,5 @@ def apply_causal_mask(attention_scores: list, mask_val: float = -1e9) -> list:
         for j in range(i + 1, seq_len):
             attention_scores[i][j] = mask_val
     return attention_scores
+
+# Refactored benchmark note: 2026-09-19 08:02 UTC
